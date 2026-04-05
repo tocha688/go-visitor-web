@@ -5,3 +5,4 @@ app:
     target_url: https://www.baidu.com
 stats:
     visit_file: data/visits.json
+
