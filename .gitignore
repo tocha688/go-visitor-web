@@ -3,4 +3,3 @@ tmp/
 *.exe
 *.log
 data/
-config.yaml
