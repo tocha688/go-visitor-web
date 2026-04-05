@@ -252,11 +252,11 @@ EOF
     systemctl status "$SERVICE_NAME" --no-pager
     echo ""
     echo "Usage:"
-    echo "  visitor start|stop|restart|status  - Manage service"
-    echo "  visitor port <num>               - Change port"
-    echo "  visitor password <pwd>          - Change password"
-    echo "  visitor log                     - View logs"
-    echo "  visitor config                  - Show config"
+    echo "  vtor start|stop|restart|status  - Manage service"
+    echo "  vtor port <num>               - Change port"
+    echo "  vtor password <pwd>          - Change password"
+    echo "  vtor log                     - View logs"
+    echo "  vtor config                  - Show config"
 }
 
 # Main
