@@ -70,8 +70,8 @@ jobs:
       - name: Create zip archives
         if: steps.version.outputs.SKIP != 'true'
         run: |
-          cp ../scripts/install.sh dist/
-          cp ../scripts/vtor dist/
+          cp ./scripts/install.sh dist/
+          cp ./scripts/vtor dist/
           chmod +x dist/install.sh dist/vtor
           cd dist
           zip visitor-windows-amd64.zip visitor-windows-amd64.exe config.yaml
