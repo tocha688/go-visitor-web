@@ -10,60 +10,51 @@ permissions:
   contents: write
 
 jobs:
-  check-version:
+  release:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Extract version from commit message
         id: version
         run: |
           VERSION=$(echo "${{ github.event.head_commit.message }}" | grep -oP 'v\d+\.\d+\.\d+' | head -1)
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           if [ -z "$VERSION" ]; then
-            echo "No valid version found in commit message, skipping release"
+            echo "No valid version found, skipping release"
             echo "SKIP=true" >> $GITHUB_OUTPUT
           else
-            echo "Found version: $VERSION"
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
             echo "SKIP=false" >> $GITHUB_OUTPUT
           fi
 
-  build:
-    needs: check-version
-    if: needs.check-version.outputs.SKIP != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create tag
-        run: |
-          VERSION="${{ needs.check-version.outputs.VERSION }}"
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag "$VERSION"
-          git push origin "$VERSION"
-
       - name: Set up Go
+        if: steps.version.outputs.SKIP != 'true'
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
       - name: Create dist directory
+        if: steps.version.outputs.SKIP != 'true'
         run: mkdir -p dist
 
       - name: Build for Windows
+        if: steps.version.outputs.SKIP != 'true'
         run: |
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/visitor-windows-amd64.exe .
           CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/visitor-windows-386.exe .
 
       - name: Build for Linux
+        if: steps.version.outputs.SKIP != 'true'
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/visitor-linux-amd64 .
           CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o dist/visitor-linux-386 .
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/visitor-linux-arm64 .
 
       - name: Create config.yaml
+        if: steps.version.outputs.SKIP != 'true'
         run: |
           echo 'app:' > dist/config.yaml
           echo '  host: "0.0.0.0"' >> dist/config.yaml
@@ -74,6 +65,7 @@ jobs:
           echo '  visit_file: "data/visits.json"' >> dist/config.yaml
 
       - name: Create zip archives
+        if: steps.version.outputs.SKIP != 'true'
         run: |
           cd dist
           zip visitor-windows-amd64.zip visitor-windows-amd64.exe config.yaml
@@ -82,7 +74,15 @@ jobs:
           tar -czf visitor-linux-386.tar.gz visitor-linux-386 config.yaml
           tar -czf visitor-linux-arm64.tar.gz visitor-linux-arm64 config.yaml
 
+      - name: Create tag
+        if: steps.version.outputs.SKIP != 'true'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag "${{ steps.version.outputs.VERSION }}"
+
       - name: Create Release
+        if: steps.version.outputs.SKIP != 'true'
         uses: softprops/action-gh-release@v1
         with:
           files: dist/visitor-windows-amd64.zip dist/visitor-windows-386.zip dist/visitor-linux-amd64.tar.gz dist/visitor-linux-386.tar.gz dist/visitor-linux-arm64.tar.gz
