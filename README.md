@@ -17,12 +17,12 @@
 ### 一键安装（推荐）
 
 ```bash
-# 在线安装（下载最新版本）
+# 在线安装（下载最新版本，默认）
 curl -sL https://raw.githubusercontent.com/tocha688/go-visitor-web/master/scripts/install.sh | sudo bash
 
 # 本地安装（使用当前目录的文件）
 chmod +x install.sh
-sudo ./install.sh
+sudo ./install.sh -l
 
 # 指定端口安装
 sudo ./install.sh -p 9000
@@ -81,11 +81,11 @@ vtor uninstall          # 卸载（需确认）
 ## 卸载
 
 ```bash
-# 使用安装脚本卸载
-sudo ./install.sh -r
-
-# 或使用 vtor 命令卸载
+# 使用 vtor 命令卸载
 sudo vtor uninstall
+
+# 或使用安装脚本卸载
+sudo ./install.sh -r
 ```
 
 ## 目录结构
