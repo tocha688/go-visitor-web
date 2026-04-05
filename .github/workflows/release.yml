@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Create dist directory
+        run: mkdir -p dist
+
+      - name: Build for Windows
+        run: |
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/visitor-windows-amd64.exe .
+          CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/visitor-windows-386.exe .
+
+      - name: Build for Linux
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/visitor-linux-amd64 .
+          CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o dist/visitor-linux-386 .
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/visitor-linux-arm64 .
+
+      - name: Create config.yaml
+        run: |
+          echo 'app:' > dist/config.yaml
+          echo '  host: "0.0.0.0"' >> dist/config.yaml
+          echo '  port: 8080' >> dist/config.yaml
+          echo '  admin_password: "123456"' >> dist/config.yaml
+          echo '  target_url: "https://www.example.com"' >> dist/config.yaml
+          echo 'stats:' >> dist/config.yaml
+          echo '  visit_file: "data/visits.json"' >> dist/config.yaml
+
+      - name: Create zip archives
+        run: |
+          cd dist
+          zip visitor-windows-amd64.zip visitor-windows-amd64.exe config.yaml
+          zip visitor-windows-386.zip visitor-windows-386.exe config.yaml
+          tar -czf visitor-linux-amd64.tar.gz visitor-linux-amd64 config.yaml
+          tar -czf visitor-linux-386.tar.gz visitor-linux-386 config.yaml
+          tar -czf visitor-linux-arm64.tar.gz visitor-linux-arm64 config.yaml
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/visitor-windows-amd64.zip dist/visitor-windows-386.zip dist/visitor-linux-amd64.tar.gz dist/visitor-linux-386.tar.gz dist/visitor-linux-arm64.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

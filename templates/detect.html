@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>跳转中...</title>
+</head>
+<body>
+    {{if .IsCrawler}}
+    <h2>检测到爬虫访问</h2>
+    <p>爬虫识别码已记录</p>
+    {{else}}
+    <h2>正在跳转...</h2>
+    <p>{{.Delay}}秒后跳转到统计页面</p>
+    {{end}}
+    <script>
+        setTimeout(function() {
+            window.location.href = "{{.TargetURL}}";
+        }, {{.Delay}} * 1000);
+    </script>
+</body>
+</html>
