@@ -155,6 +155,9 @@ download_from_web() {
     echo "Extracting..."
     tar -xzf "$FILENAME"
     
+    # Rename extracted binary to expected name
+    mv "visitor-linux-$ARCH_NAME" "$BIN_NAME"
+    
     install_files
 }
 
