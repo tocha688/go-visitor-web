@@ -47,11 +47,14 @@
 <body>
     <div class="header">
         <h1>访客系统</h1>
-        <div>
-            <button onclick="openSettings()" class="btn btn-primary" style="margin-right:10px">设置</button>
-            <button onclick="loadData()" class="btn btn-primary" style="margin-right:10px">刷新</button>
+        <div style="display:flex;gap:8px;align-items:center">
+            <button onclick="openSettings()" class="btn btn-secondary">设置</button>
+            <button onclick="loadData()" class="btn btn-secondary">刷新</button>
             <form action="/adm/reset" method="post" onsubmit="return confirm('确定要重置所有数据吗？')" style="display:inline">
-                <button type="submit" class="btn btn-danger">重置数据</button>
+                <button type="submit" class="btn btn-danger">重置</button>
+            </form>
+            <form action="/adm/logout" method="post">
+                <button type="submit" class="btn" style="background:#666;color:white">退出</button>
             </form>
         </div>
     </div>

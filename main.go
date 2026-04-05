@@ -211,6 +211,7 @@ func main() {
 	r.GET("/loading", processVisit)
 	r.GET("/adm", adminLoginPage)
 	r.POST("/adm/login", adminLogin)
+	r.POST("/adm/logout", adminLogout)
 	r.GET("/adm/dashboard", adminDashboard)
 	r.POST("/adm/reset", adminReset)
 	r.POST("/adm/clearLogs", adminClearLogs)
@@ -474,6 +475,11 @@ func adminLogin(c *gin.Context) {
 		return
 	}
 	c.HTML(http.StatusUnauthorized, "login.html", gin.H{"Error": "密码错误"})
+}
+
+func adminLogout(c *gin.Context) {
+	c.SetCookie("admin", "", -1, "/", "", false, true)
+	c.Redirect(http.StatusFound, "/adm")
 }
 
 func adminDashboard(c *gin.Context) {
