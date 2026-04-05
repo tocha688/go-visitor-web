@@ -6,8 +6,10 @@ REPO="tocha688/go-visitor-web"
 SERVICE_NAME="visitor"
 INSTALL_DIR="/opt/visitor"
 BIN_NAME="visitor"
+CLI_NAME="visitor"
 CONFIG_FILE="$INSTALL_DIR/config.yaml"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
+CLI_FILE="/usr/local/bin/$CLI_NAME"
 
 # Default values
 PORT="8080"
@@ -84,6 +86,12 @@ uninstall() {
         echo "Removing service file..."
         rm -f "$SERVICE_FILE"
         systemctl daemon-reload
+    fi
+    
+    # Remove CLI
+    if [ -f "$CLI_FILE" ]; then
+        echo "Removing CLI..."
+        rm -f "$CLI_FILE"
     fi
     
     # Remove installation directory
@@ -173,6 +181,13 @@ install_files() {
     cp "$BIN_NAME" "$INSTALL_DIR/$BIN_NAME"
     chmod +x "$INSTALL_DIR/$BIN_NAME"
     
+    # Install CLI
+    if [ -f "$CLI_NAME" ]; then
+        cp "$CLI_NAME" "$CLI_FILE"
+        chmod +x "$CLI_FILE"
+        echo "CLI installed to $CLI_FILE"
+    fi
+    
     # Create config if not exists
     if [ ! -f "$CONFIG_FILE" ]; then
         cat > "$CONFIG_FILE" << EOF
@@ -222,16 +237,23 @@ EOF
     # Cleanup
     rm -f /tmp/$FILENAME 2>/dev/null
     rm -f /tmp/$BIN_NAME 2>/dev/null
+    rm -f /tmp/$CLI_NAME 2>/dev/null
     
     echo ""
     echo "=== Installation Complete ==="
     echo "Service: $SERVICE_NAME"
     echo "Config: $CONFIG_FILE"
+    echo "CLI: $CLI_FILE"
     echo "Port: $PORT"
     echo ""
     systemctl status "$SERVICE_NAME" --no-pager
     echo ""
-    echo "View logs: journalctl -u $SERVICE_NAME -f"
+    echo "Usage:"
+    echo "  visitor start|stop|restart|status  - Manage service"
+    echo "  visitor port <num>               - Change port"
+    echo "  visitor password <pwd>          - Change password"
+    echo "  visitor log                     - View logs"
+    echo "  visitor config                  - Show config"
 }
 
 # Main
