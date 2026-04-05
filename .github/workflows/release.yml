@@ -83,6 +83,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git tag "${{ steps.version.outputs.VERSION }}"
+          git push origin "${{ steps.version.outputs.VERSION }}"
 
       - name: Create Release
         if: steps.version.outputs.SKIP != 'true'
