@@ -264,6 +264,11 @@ cmd_upgrade() {
     cd /tmp
     curl -# -L -o "$FILENAME" "$DOWNLOAD_URL"
     
+    # Download vtor script
+    echo "Downloading vtor CLI..."
+    VTOR_URL="https://raw.githubusercontent.com/$REPO/master/scripts/vtor"
+    curl -s -L -o vtor "$VTOR_URL"
+    
     echo "Extracting..."
     tar -xzf "$FILENAME"
     
@@ -275,11 +280,15 @@ cmd_upgrade() {
     cp "visitor-linux-$ARCH_NAME" "$INSTALL_DIR/visitor"
     chmod +x "$INSTALL_DIR/visitor"
     
+    echo "Upgrading vtor CLI..."
+    cp vtor "$CLI_FILE"
+    chmod +x "$CLI_FILE"
+    
     # Save new version
     echo "$latest_ver" > "$VERSION_FILE"
     echo "Version saved: v$latest_ver"
     
-    rm -f "visitor-linux-$ARCH_NAME"
+    rm -f "visitor-linux-$ARCH_NAME" vtor
     
     echo "Starting service..."
     systemctl start "$SERVICE_NAME"
