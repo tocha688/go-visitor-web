@@ -40,18 +40,21 @@ jobs:
         if: steps.version.outputs.SKIP != 'true'
         run: mkdir -p dist
 
-      - name: Build for Windows
+      - name: Build for Windows and Linux
         if: steps.version.outputs.SKIP != 'true'
         run: |
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/visitor-windows-amd64.exe .
-          CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/visitor-windows-386.exe .
-
-      - name: Build for Linux
-        if: steps.version.outputs.SKIP != 'true'
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/visitor-linux-amd64 .
-          CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o dist/visitor-linux-386 .
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/visitor-linux-arm64 .
+          build_windows() {
+            CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/visitor-windows-amd64.exe .
+            CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/visitor-windows-386.exe .
+          }
+          build_linux() {
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/visitor-linux-amd64 .
+            CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o dist/visitor-linux-386 .
+            CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/visitor-linux-arm64 .
+          }
+          build_windows &
+          build_linux &
+          wait
 
       - name: Create config.yaml
         if: steps.version.outputs.SKIP != 'true'
