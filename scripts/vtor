@@ -275,6 +275,11 @@ cmd_upgrade() {
     echo "Stopping service..."
     systemctl stop "$SERVICE_NAME"
     
+    # Backup current config before upgrade
+    if [ -f "$CONFIG_FILE" ]; then
+        cp "$CONFIG_FILE" "$CONFIG_FILE.bak"
+    fi
+    
     echo "Upgrading binary..."
     cp "$INSTALL_DIR/visitor" "$INSTALL_DIR/visitor.bak"
     cp "visitor-linux-$ARCH_NAME" "$INSTALL_DIR/visitor"
@@ -283,6 +288,29 @@ cmd_upgrade() {
     echo "Upgrading vtor CLI..."
     cp vtor "$CLI_FILE"
     chmod +x "$CLI_FILE"
+    
+    # Merge config: add missing fields from new config
+    if [ -f "$CONFIG_FILE.bak" ] && [ -f config.yaml ]; then
+        echo "Merging config..."
+        # Extract new default values for missing fields
+        NEW_ADMIN_PATH=$(grep "admin_path:" config.yaml | sed 's/.*admin_path: *//' | tr -d ' "')
+        NEW_ADMIN_PASSWORD=$(grep "admin_password:" config.yaml | sed 's/.*admin_password: *//' | tr -d ' "')
+        NEW_TARGET_URL=$(grep "target_url:" config.yaml | sed 's/.*target_url: *//' | tr -d ' "')
+        
+        # Add missing admin_path
+        if ! grep -q "admin_path:" "$CONFIG_FILE.bak" 2>/dev/null; then
+            sed -i "/admin_password:/a\\  admin_path: \"$NEW_ADMIN_PATH\"" "$CONFIG_FILE.bak"
+        fi
+        
+        # Add missing admin_password (only if empty or default)
+        if ! grep -q "admin_password:" "$CONFIG_FILE.bak" 2>/dev/null; then
+            sed -i "/target_url:/a\\  admin_password: \"$NEW_ADMIN_PASSWORD\"" "$CONFIG_FILE.bak"
+        fi
+        
+        cp "$CONFIG_FILE.bak" "$CONFIG_FILE"
+        rm -f "$CONFIG_FILE.bak"
+        echo "Config merged"
+    fi
     
     # Save new version
     echo "$latest_ver" > "$VERSION_FILE"

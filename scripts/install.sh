@@ -14,6 +14,7 @@ VERSION_FILE="$INSTALL_DIR/version"
 
 # Default values
 PORT="8080"
+ADMIN_PATH="adm"
 MODE="web"
 REMOVE=false
 
@@ -214,16 +215,22 @@ install_files() {
     
     # Create config if not exists
     if [ ! -f "$CONFIG_FILE" ]; then
-        cat > "$CONFIG_FILE" << EOF
+        if [ -f config.yaml ]; then
+            cp config.yaml "$CONFIG_FILE"
+            echo "Config installed from package"
+        else
+            cat > "$CONFIG_FILE" << EOF
 app:
   host: "0.0.0.0"
   port: $PORT
+  admin_path: "adm"
   admin_password: "123456"
   target_url: "https://www.example.com"
 stats:
   visit_file: "data/visits.json"
 EOF
-        echo "Config created at $CONFIG_FILE"
+            echo "Config created at $CONFIG_FILE"
+        fi
     else
         # Update port in existing config
         sed -i "s/port:.*/port: $PORT/" "$CONFIG_FILE"
@@ -270,6 +277,15 @@ EOF
     echo "Config: $CONFIG_FILE"
     echo "CLI: $CLI_FILE"
     echo "Port: $PORT"
+    
+    # Get admin path from config
+    if [ -f "$CONFIG_FILE" ]; then
+        ADMIN_PATH=$(grep "admin_path:" "$CONFIG_FILE" | sed 's/.*admin_path: *["'"'"']\?//' | sed 's/["'"'"']*//' | tr -d ' ')
+        if [ -z "$ADMIN_PATH" ]; then
+            ADMIN_PATH="adm"
+        fi
+    fi
+    echo "Admin URL: http://localhost:$PORT/$ADMIN_PATH"
     echo ""
     systemctl status "$SERVICE_NAME" --no-pager
     echo ""

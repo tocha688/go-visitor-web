@@ -1,8 +1,8 @@
 app:
     host: 0.0.0.0
     port: 8080
+    admin_path: adm
     admin_password: "123456"
     target_url: https://www.baidu.com
 stats:
     visit_file: data/visits.json
-

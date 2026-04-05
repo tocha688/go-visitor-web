@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>管理后台</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -48,6 +49,23 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
         .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
         .form-group input:focus { outline: none; border-color: #667eea; }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 16px; }
+            .header-links { gap: 12px; font-size: 13px; }
+            .container { padding: 0 12px; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .stat-card { padding: 15px; }
+            .stat-card .number { font-size: 24px; }
+            .stat-card .label { font-size: 12px; }
+            .section { padding: 15px; }
+            .section h3 { font-size: 14px; }
+            table { font-size: 12px; }
+            th, td { padding: 8px 10px; }
+        }
+        @media (max-width: 480px) {
+            .header-links { gap: 8px; font-size: 12px; }
+            .stats-row { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -57,10 +75,10 @@
             <div class="header-links">
                 <a onclick="openSettings()">设置</a>
                 <a onclick="loadData()">刷新</a>
-                <form action="/adm/reset" method="post" onsubmit="return confirm('确定要重置所有数据吗？')">
+                <form id="resetForm" method="post" onsubmit="return confirm('确定要重置所有数据吗？')">
                     <a href="#" onclick="this.closest('form').submit(); return false;">清空</a>
                 </form>
-                <form action="/adm/logout" method="post">
+                <form id="logoutForm" method="post">
                     <a href="#" onclick="this.closest('form').submit(); return false;">退出</a>
                 </form>
             </div>
@@ -115,7 +133,7 @@
     </div>
 
     <div id="settingsModal" class="modal-overlay">
-        <div class="modal">
+        <div class="modal" style="position:fixed;left:50%;transform:translateX(-50%);top:-2vh;max-height:90vh;width:90%;max-width:500px">
             <div class="modal-header">
                 <h3>设置</h3>
                 <span class="modal-close" onclick="closeSettings()">&times;</span>
@@ -124,6 +142,10 @@
                 <div class="form-group">
                     <label>跳转链接</label>
                     <input type="text" id="settingsTargetUrl" placeholder="https://example.com">
+                </div>
+                <div class="form-group">
+                    <label>管理路径</label>
+                    <input type="text" id="settingsAdminPath" placeholder="adm">
                 </div>
                 <div class="form-group">
                     <label>新密码</label>
@@ -138,21 +160,23 @@
     </div>
 
     <div id="detailModal" class="modal-overlay">
-        <div class="modal" style="width:600px">
+        <div class="modal" style="position:fixed;left:50%;transform:translateX(-50%);top:-2vh;max-height:90vh;width:90%;max-width:600px">
             <div class="modal-header">
                 <h3>访问详情</h3>
                 <span class="modal-close" onclick="closeDetailModal()">&times;</span>
             </div>
-            <div id="modalContent" class="modal-body" style="max-height:calc(100vh - 100px);overflow-y:auto"></div>
+            <div id="modalContent" class="modal-body" style="max-height:calc(90vh - 60px);overflow-y:auto"></div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <script>
         var currentTargetUrl = '';
+        var adminPath = '{{.AdminPath}}' || 'adm';
 
         function openSettings() {
             document.getElementById('settingsTargetUrl').value = currentTargetUrl;
+            document.getElementById('settingsAdminPath').value = adminPath;
             document.getElementById('settingsPassword').value = '';
             document.getElementById('settingsModal').style.display = 'block';
         }
@@ -163,30 +187,28 @@
 
         function saveSettings() {
             var targetUrl = document.getElementById('settingsTargetUrl').value;
+            var adminPathVal = document.getElementById('settingsAdminPath').value;
             var password = document.getElementById('settingsPassword').value;
             
-            if (targetUrl) {
-                fetch('/adm/updateTarget', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: 'target_url=' + encodeURIComponent(targetUrl)
-                });
-            }
+            var formData = new URLSearchParams();
+            if (targetUrl) formData.append('target_url', targetUrl);
+            if (adminPathVal) formData.append('admin_path', adminPathVal);
+            if (password) formData.append('password', password);
             
-            if (password) {
-                fetch('/adm/updatePassword', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: 'password=' + encodeURIComponent(password)
-                }).then(function(r){ return r.json(); }).then(function(d){
-                    if (d.status === 'ok') {
-                        alert('密码修改成功');
+            fetch('/' + adminPath + '/updateConfig', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: formData.toString()
+            }).then(function(r){ return r.json(); }).then(function(d){
+                if (d.status === 'ok') {
+                    if (d.redirect) {
+                        window.location.href = d.redirect;
+                    } else {
+                        closeSettings();
+                        loadData();
                     }
-                });
-            }
-            
-            closeSettings();
-            loadData();
+                }
+            });
         }
 
         function closeDetailModal() {
@@ -204,6 +226,12 @@
                 document.getElementById('uniqueIPs').textContent = data.UniqueIPs;
                 currentTargetUrl = data.TargetURL || '';
                 document.getElementById('currentTargetUrl').textContent = currentTargetUrl;
+                
+                if (data.AdminPath) {
+                    adminPath = data.AdminPath;
+                    document.getElementById('resetForm').action = '/' + adminPath + '/reset';
+                    document.getElementById('logoutForm').action = '/' + adminPath + '/logout';
+                }
 
                 let historyHtml = '';
                 if (data.History && data.History.length > 0) {

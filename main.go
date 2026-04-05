@@ -79,6 +79,7 @@ type Config struct {
 type AppConfig struct {
 	Host          string `yaml:"host"`
 	Port          int    `yaml:"port"`
+	AdminPath     string `yaml:"admin_path"`
 	AdminPassword string `yaml:"admin_password"`
 	TargetURL     string `yaml:"target_url"`
 }
@@ -209,16 +210,15 @@ func main() {
 	r.GET("/", showIndex)
 	r.POST("/api/visit", recordVisitAPI)
 	r.GET("/loading", processVisit)
-	r.GET("/adm", adminLoginPage)
-	r.POST("/adm/login", adminLogin)
-	r.POST("/adm/logout", adminLogout)
-	r.GET("/adm/dashboard", adminDashboard)
-	r.POST("/adm/reset", adminReset)
-	r.POST("/adm/clearLogs", adminClearLogs)
-	r.POST("/adm/updateTarget", adminUpdateTarget)
-	r.POST("/adm/updatePassword", adminUpdatePassword)
 	r.GET("/api/stats", apiStats)
-	r.NoRoute(showIndex)
+	r.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/"+config.App.AdminPath) {
+			handleAdminRoute(c)
+		} else {
+			showIndex(c)
+		}
+	})
 
 	if err := os.MkdirAll(filepath.Dir(config.Stats.VisitFile), 0755); err != nil {
 		panic(err)
@@ -235,6 +235,7 @@ func loadConfig() {
 			App: AppConfig{
 				Host:          "0.0.0.0",
 				Port:          8080,
+				AdminPath:     "adm",
 				AdminPassword: "123456",
 				TargetURL:     "https://www.example.com",
 			},
@@ -247,6 +248,9 @@ func loadConfig() {
 	yaml.Unmarshal(data, &config)
 	if config.Stats.VisitFile == "" {
 		config.Stats.VisitFile = "data/visits.json"
+	}
+	if config.App.AdminPath == "" {
+		config.App.AdminPath = "adm"
 	}
 }
 
@@ -464,28 +468,28 @@ func processVisit(c *gin.Context) {
 }
 
 func adminLoginPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "login.html", nil)
+	c.HTML(http.StatusOK, "login.html", gin.H{"AdminPath": config.App.AdminPath})
 }
 
 func adminLogin(c *gin.Context) {
 	password := c.PostForm("password")
 	if password == config.App.AdminPassword {
 		c.SetCookie("admin", "true", 3600, "/", "", false, true)
-		c.Redirect(http.StatusFound, "/adm/dashboard")
+		c.Redirect(http.StatusFound, "/"+config.App.AdminPath+"/dashboard")
 		return
 	}
-	c.HTML(http.StatusUnauthorized, "login.html", gin.H{"Error": "密码错误"})
+	c.HTML(http.StatusUnauthorized, "login.html", gin.H{"Error": "密码错误", "AdminPath": config.App.AdminPath})
 }
 
 func adminLogout(c *gin.Context) {
 	c.SetCookie("admin", "", -1, "/", "", false, true)
-	c.Redirect(http.StatusFound, "/adm")
+	c.Redirect(http.StatusFound, "/"+config.App.AdminPath)
 }
 
 func adminDashboard(c *gin.Context) {
 	admin, _ := c.Cookie("admin")
 	if admin != "true" {
-		c.Redirect(http.StatusFound, "/adm")
+		c.Redirect(http.StatusFound, "/"+config.App.AdminPath)
 		return
 	}
 
@@ -511,6 +515,7 @@ func adminDashboard(c *gin.Context) {
 		"History":   history,
 		"Logs":      stats.Logs,
 		"TargetURL": config.App.TargetURL,
+		"AdminPath": config.App.AdminPath,
 	})
 }
 
@@ -550,13 +555,69 @@ func apiStats(c *gin.Context) {
 		"History":   history,
 		"Logs":      userLogs,
 		"TargetURL": config.App.TargetURL,
+		"AdminPath": config.App.AdminPath,
 	})
+}
+
+func handleAdminRoute(c *gin.Context) {
+	path := c.Request.URL.Path
+	adminPath := "/" + config.App.AdminPath
+
+	if !strings.HasPrefix(path, adminPath) {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	remaining := strings.TrimPrefix(path, adminPath)
+
+	switch {
+	case remaining == "" || remaining == "/":
+		adminLoginPage(c)
+	case strings.HasPrefix(remaining, "/login"):
+		if c.Request.Method == "POST" {
+			adminLogin(c)
+		} else {
+			c.AbortWithStatus(http.StatusMethodNotAllowed)
+		}
+	case strings.HasPrefix(remaining, "/logout"):
+		if c.Request.Method == "POST" {
+			adminLogout(c)
+		} else {
+			c.AbortWithStatus(http.StatusMethodNotAllowed)
+		}
+	case strings.HasPrefix(remaining, "/dashboard"):
+		if c.Request.Method == "GET" {
+			adminDashboard(c)
+		} else {
+			c.AbortWithStatus(http.StatusMethodNotAllowed)
+		}
+	case strings.HasPrefix(remaining, "/reset"):
+		if c.Request.Method == "POST" {
+			adminReset(c)
+		} else {
+			c.AbortWithStatus(http.StatusMethodNotAllowed)
+		}
+	case strings.HasPrefix(remaining, "/clearLogs"):
+		if c.Request.Method == "POST" {
+			adminClearLogs(c)
+		} else {
+			c.AbortWithStatus(http.StatusMethodNotAllowed)
+		}
+	case strings.HasPrefix(remaining, "/updateConfig"):
+		if c.Request.Method == "POST" {
+			adminUpdateConfig(c)
+		} else {
+			c.AbortWithStatus(http.StatusMethodNotAllowed)
+		}
+	default:
+		c.AbortWithStatus(http.StatusNotFound)
+	}
 }
 
 func adminReset(c *gin.Context) {
 	admin, _ := c.Cookie("admin")
 	if admin != "true" {
-		c.Redirect(http.StatusFound, "/adm")
+		c.Redirect(http.StatusFound, "/"+config.App.AdminPath)
 		return
 	}
 
@@ -567,35 +628,19 @@ func adminReset(c *gin.Context) {
 	stats.Logs = []VisitLog{}
 	stats.Fingerprints = make(map[string]Fingerprint)
 	saveStats()
-	c.Redirect(http.StatusFound, "/adm/dashboard")
+	c.Redirect(http.StatusFound, "/"+config.App.AdminPath+"/dashboard")
 }
 
 func adminClearLogs(c *gin.Context) {
 	admin, _ := c.Cookie("admin")
 	if admin != "true" {
-		c.Redirect(http.StatusFound, "/adm")
+		c.Redirect(http.StatusFound, "/"+config.App.AdminPath)
 		return
 	}
 
 	stats.Logs = []VisitLog{}
 	saveStats()
-	c.Redirect(http.StatusFound, "/adm/dashboard")
-}
-
-func adminUpdateTarget(c *gin.Context) {
-	admin, _ := c.Cookie("admin")
-	if admin != "true" {
-		c.Redirect(http.StatusFound, "/adm")
-		return
-	}
-
-	targetURL := c.PostForm("target_url")
-	if targetURL != "" {
-		config.App.TargetURL = targetURL
-		data, _ := yaml.Marshal(config)
-		os.WriteFile("config.yaml", data, 0644)
-	}
-	c.Redirect(http.StatusFound, "/adm/dashboard")
+	c.Redirect(http.StatusFound, "/"+config.App.AdminPath+"/dashboard")
 }
 
 func adminUpdatePassword(c *gin.Context) {
@@ -614,4 +659,40 @@ func adminUpdatePassword(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusBadRequest, gin.H{"error": "password required"})
+}
+
+func adminUpdateConfig(c *gin.Context) {
+	admin, _ := c.Cookie("admin")
+	if admin != "true" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	targetURL := c.PostForm("target_url")
+	if targetURL != "" {
+		config.App.TargetURL = targetURL
+	}
+
+	password := c.PostForm("password")
+	if password != "" {
+		config.App.AdminPassword = password
+	}
+
+	adminPath := c.PostForm("admin_path")
+	adminPathChanged := false
+	if adminPath != "" && adminPath != config.App.AdminPath {
+		config.App.AdminPath = adminPath
+		adminPathChanged = true
+	}
+
+	data, _ := yaml.Marshal(config)
+	os.WriteFile("config.yaml", data, 0644)
+
+	if adminPathChanged {
+		loadConfig()
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "redirect": "/" + adminPath + "/dashboard"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }

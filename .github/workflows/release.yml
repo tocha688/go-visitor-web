@@ -56,16 +56,9 @@ jobs:
           build_linux &
           wait
 
-      - name: Create config.yaml
+      - name: Copy config.yaml
         if: steps.version.outputs.SKIP != 'true'
-        run: |
-          echo 'app:' > dist/config.yaml
-          echo '  host: "0.0.0.0"' >> dist/config.yaml
-          echo '  port: 8080' >> dist/config.yaml
-          echo '  admin_password: "123456"' >> dist/config.yaml
-          echo '  target_url: "https://www.example.com"' >> dist/config.yaml
-          echo 'stats:' >> dist/config.yaml
-          echo '  visit_file: "data/visits.json"' >> dist/config.yaml
+        run: cp config.yaml dist/
 
       - name: Create zip archives
         if: steps.version.outputs.SKIP != 'true'
