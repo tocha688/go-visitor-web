@@ -101,7 +101,9 @@ sudo vtor uninstall
 │   └── login.html       # 登录页面
 ├── scripts/             # 脚本目录
 │   ├── install.sh       # 安装脚本
-│   └── vtor             # CLI 管理命令
+│   ├── vtor             # CLI 管理命令
+│   ├── build.bat        # Windows 编译脚本
+│   └── build.sh         # Linux 编译脚本
 └── dist/                # 编译输出目录
 ```
 
