@@ -215,6 +215,7 @@ func main() {
 	r.POST("/adm/reset", adminReset)
 	r.POST("/adm/clearLogs", adminClearLogs)
 	r.POST("/adm/updateTarget", adminUpdateTarget)
+	r.POST("/adm/updatePassword", adminUpdatePassword)
 	r.GET("/api/stats", apiStats)
 	r.NoRoute(showIndex)
 
@@ -589,4 +590,22 @@ func adminUpdateTarget(c *gin.Context) {
 		os.WriteFile("config.yaml", data, 0644)
 	}
 	c.Redirect(http.StatusFound, "/adm/dashboard")
+}
+
+func adminUpdatePassword(c *gin.Context) {
+	admin, _ := c.Cookie("admin")
+	if admin != "true" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	password := c.PostForm("password")
+	if password != "" {
+		config.App.AdminPassword = password
+		data, _ := yaml.Marshal(config)
+		os.WriteFile("config.yaml", data, 0644)
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		return
+	}
+	c.JSON(http.StatusBadRequest, gin.H{"error": "password required"})
 }

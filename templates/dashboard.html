@@ -70,6 +70,15 @@
         </div>
 
         <div class="section">
+            <h3>修改密码</h3>
+            <form id="passwordForm" style="margin-top:15px;display:flex;gap:10px">
+                <input type="password" id="newPassword" placeholder="新密码" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
+                <button type="submit" class="btn" style="background:#667eea;color:white">修改</button>
+            </form>
+            <div id="passwordMsg" style="margin-top:10px;font-size:13px"></div>
+        </div>
+
+        <div class="section">
             <h3>历史统计 <span style="font-size:12px;color:#999;font-weight:normal">按日期统计</span></h3>
             <table>
                 <thead><tr><th>日期</th><th>访问量</th><th>独立IP</th><th>爬虫</th></tr></thead>
@@ -192,6 +201,27 @@
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
         document.getElementById('modal').onclick = function(e) { if (e.target === this) closeModal(); }
+        
+        document.getElementById('passwordForm').addEventListener('submit', function(e){
+            e.preventDefault();
+            var pwd = document.getElementById('newPassword').value;
+            if (!pwd) return;
+            fetch('/adm/updatePassword', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'password=' + encodeURIComponent(pwd)
+            }).then(function(r){ return r.json(); }).then(function(d){
+                var msg = document.getElementById('passwordMsg');
+                if (d.status === 'ok') {
+                    msg.style.color = '#4caf50';
+                    msg.textContent = '密码修改成功';
+                    document.getElementById('newPassword').value = '';
+                } else {
+                    msg.style.color = '#f44336';
+                    msg.textContent = '修改失败: ' + (d.error || '');
+                }
+            });
+        });
         
         loadData();
         setInterval(loadData, 5000);
