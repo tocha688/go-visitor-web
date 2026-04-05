@@ -4,6 +4,8 @@ SERVICE_NAME="visitor"
 INSTALL_DIR="/opt/visitor"
 CONFIG_FILE="$INSTALL_DIR/config.yaml"
 CLI_FILE="/usr/local/bin/vtor"
+VERSION_FILE="$INSTALL_DIR/version"
+REPO="tocha688/go-visitor-web"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -11,7 +13,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 usage() {
-    echo "vtor - Visitor Tracker CLI"
+    echo "vtor - Visitor Tracker CLI v1.0.0"
     echo ""
     echo "Usage: vtor <command> [options]"
     echo ""
@@ -20,6 +22,7 @@ usage() {
     echo "  stop               Stop the service"
     echo "  restart            Restart the service"
     echo "  status             Show service status"
+    echo "  version            Show current version"
     echo "  port <num>         Change port"
     echo "  password <pwd>     Change admin password"
     echo "  log                Show service logs (follow mode)"
@@ -40,6 +43,60 @@ check_root() {
     if [ "$EUID" -ne 0 ]; then
         echo -e "${RED}Please run as root: sudo vtor $1${NC}"
         exit 1
+    fi
+}
+
+get_latest_version() {
+    LATEST_VERSION=$(curl -s https://api.github.com/repos/$REPO/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+' | sed 's/v//')
+    echo "$LATEST_VERSION"
+}
+
+get_local_version() {
+    if [ -f "$VERSION_FILE" ]; then
+        cat "$VERSION_FILE"
+    else
+        echo "0.0.0"
+    fi
+}
+
+compare_versions() {
+    local v1="$1"
+    local v2="$2"
+    
+    if [ "$v1" = "$v2" ]; then
+        echo "equal"
+        return 0
+    fi
+    
+    local v1_major=$(echo "$v1" | cut -d. -f1)
+    local v1_minor=$(echo "$v1" | cut -d. -f2)
+    local v1_patch=$(echo "$v1" | cut -d. -f3)
+    local v2_major=$(echo "$v2" | cut -d. -f1)
+    local v2_minor=$(echo "$v2" | cut -d. -f2)
+    local v2_patch=$(echo "$v2" | cut -d. -f3)
+    
+    if [ "$v1_major" -lt "$v2_major" ]; then
+        echo "lower"
+        return 0
+    elif [ "$v1_major" -gt "$v2_major" ]; then
+        echo "higher"
+        return 0
+    fi
+    
+    if [ "$v1_minor" -lt "$v2_minor" ]; then
+        echo "lower"
+        return 0
+    elif [ "$v1_minor" -gt "$v2_minor" ]; then
+        echo "higher"
+        return 0
+    fi
+    
+    if [ "$v1_patch" -lt "$v2_patch" ]; then
+        echo "lower"
+        return 0
+    else
+        echo "higher"
+        return 0
     fi
 }
 
@@ -75,6 +132,28 @@ cmd_status() {
         echo -e "${RED}● $SERVICE_NAME is stopped${NC}"
     fi
     systemctl status "$SERVICE_NAME" --no-pager
+}
+
+cmd_version() {
+    local local_ver=$(get_local_version)
+    echo "Current version: v$local_ver"
+    
+    echo "Fetching latest version..."
+    local latest_ver=$(get_latest_version)
+    if [ -z "$latest_ver" ]; then
+        echo -e "${RED}Failed to fetch latest version${NC}"
+        exit 1
+    fi
+    echo "Latest version: v$latest_ver"
+    
+    local cmp=$(compare_versions "$local_ver" "$latest_ver")
+    if [ "$cmp" = "lower" ]; then
+        echo -e "${YELLOW}A newer version is available${NC}"
+    elif [ "$cmp" = "equal" ]; then
+        echo -e "${GREEN}You are on the latest version${NC}"
+    else
+        echo -e "${YELLOW}You are on a newer version (dev build?)${NC}"
+    fi
 }
 
 cmd_port() {
@@ -134,15 +213,30 @@ cmd_upgrade() {
     echo -e "${YELLOW}=== Upgrading Visitor Tracker ===${NC}"
     echo ""
     
-    REPO="tocha688/go-visitor-web"
+    local local_ver=$(get_local_version)
+    echo "Current version: v$local_ver"
     
     echo "Fetching latest version..."
-    LATEST_VERSION=$(curl -s https://api.github.com/repos/$REPO/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+' | sed 's/v//')
-    if [ -z "$LATEST_VERSION" ]; then
+    local latest_ver=$(get_latest_version)
+    if [ -z "$latest_ver" ]; then
         echo -e "${RED}Failed to fetch latest version${NC}"
         exit 1
     fi
-    echo "Latest version: v$LATEST_VERSION"
+    echo "Latest version: v$latest_ver"
+    
+    local cmp=$(compare_versions "$local_ver" "$latest_ver")
+    if [ "$cmp" = "equal" ]; then
+        echo -e "${GREEN}You are already on the latest version${NC}"
+        return 0
+    elif [ "$cmp" = "higher" ]; then
+        echo -e "${YELLOW}You are on a newer version than latest release (dev build?)${NC}"
+        read -p "Continue anyway? [y/N] " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Upgrade cancelled"
+            exit 0
+        fi
+    fi
     
     ARCH=$(uname -m)
     case $ARCH in
@@ -163,7 +257,7 @@ cmd_upgrade() {
     echo "Architecture: $ARCH_NAME"
     
     FILENAME="visitor-linux-$ARCH_NAME.tar.gz"
-    DOWNLOAD_URL="https://github.com/$REPO/releases/download/v$LATEST_VERSION/$FILENAME"
+    DOWNLOAD_URL="https://github.com/$REPO/releases/download/v$latest_ver/$FILENAME"
     
     echo ""
     echo "Downloading..."
@@ -180,6 +274,11 @@ cmd_upgrade() {
     cp "$INSTALL_DIR/visitor" "$INSTALL_DIR/visitor.bak"
     cp "visitor-linux-$ARCH_NAME" "$INSTALL_DIR/visitor"
     chmod +x "$INSTALL_DIR/visitor"
+    
+    # Save new version
+    echo "$latest_ver" > "$VERSION_FILE"
+    echo "Version saved: v$latest_ver"
+    
     rm -f "visitor-linux-$ARCH_NAME"
     
     echo "Starting service..."
@@ -189,7 +288,7 @@ cmd_upgrade() {
     
     echo ""
     if systemctl is-active --quiet "$SERVICE_NAME"; then
-        echo -e "${GREEN}=== Upgrade Complete ===${NC}"
+        echo -e "${GREEN}=== Upgrade Complete: v$latest_ver ===${NC}"
     else
         echo -e "${RED}Upgrade failed, restoring backup...${NC}"
         cp "$INSTALL_DIR/visitor.bak" "$INSTALL_DIR/visitor"
@@ -266,6 +365,9 @@ case "$1" in
         ;;
     status)
         cmd_status
+        ;;
+    version)
+        cmd_version
         ;;
     port)
         cmd_port "$2"

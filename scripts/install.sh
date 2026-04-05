@@ -10,6 +10,7 @@ CLI_NAME="vtor"
 CONFIG_FILE="$INSTALL_DIR/config.yaml"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 CLI_FILE="/usr/local/bin/$CLI_NAME"
+VERSION_FILE="$INSTALL_DIR/version"
 
 # Default values
 PORT="8080"
@@ -158,7 +159,7 @@ download_from_web() {
     # Rename extracted binary to expected name
     mv "visitor-linux-$ARCH_NAME" "$BIN_NAME"
     
-    install_files
+    install_files "$LATEST_VERSION"
 }
 
 # Install from local files
@@ -172,13 +173,33 @@ install_local() {
         exit 1
     fi
     
-    install_files
+    # Try to get version from binary or default to local
+    INSTALL_VERSION="local"
+    install_files "$INSTALL_VERSION"
 }
 
 # Install files
+# Args: version
 install_files() {
+    local install_ver="${1:-0.0.0}"
+    
     echo "Installing..."
     mkdir -p "$INSTALL_DIR"
+    
+    # Install binary
+    cp "$BIN_NAME" "$INSTALL_DIR/$BIN_NAME"
+    chmod +x "$INSTALL_DIR/$BIN_NAME"
+    
+    # Install CLI
+    if [ -f "$CLI_NAME" ]; then
+        cp "$CLI_NAME" "$CLI_FILE"
+        chmod +x "$CLI_FILE"
+        echo "CLI installed to $CLI_FILE"
+    fi
+    
+    # Save version
+    echo "$install_ver" > "$VERSION_FILE"
+    echo "Version saved: v$install_ver"
     
     # Install binary
     cp "$BIN_NAME" "$INSTALL_DIR/$BIN_NAME"
@@ -244,6 +265,7 @@ EOF
     
     echo ""
     echo "=== Installation Complete ==="
+    echo "Version: v$install_ver"
     echo "Service: $SERVICE_NAME"
     echo "Config: $CONFIG_FILE"
     echo "CLI: $CLI_FILE"
