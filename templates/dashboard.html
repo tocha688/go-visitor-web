@@ -86,6 +86,14 @@
             </div>
         </div>
 
+        <div style="background:white;border-radius:12px;padding:15px 25px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center">
+            <div>
+                <span style="color:#666;font-size:13px">跳转链接: </span>
+                <span id="currentTargetUrl" style="color:#333;font-size:14px">-</span>
+            </div>
+            <a onclick="openSettings()" style="color:#667eea;font-size:13px;cursor:pointer;text-decoration:none">修改</a>
+        </div>
+
         <div class="section">
             <h3>历史统计 <span style="font-size:12px;color:#999;font-weight:normal">按日期统计</span></h3>
             <table>
@@ -195,6 +203,7 @@
                 document.getElementById('logCount').textContent = data.Logs ? data.Logs.length : 0;
                 document.getElementById('uniqueIPs').textContent = data.UniqueIPs;
                 currentTargetUrl = data.TargetURL || '';
+                document.getElementById('currentTargetUrl').textContent = currentTargetUrl;
 
                 let historyHtml = '';
                 if (data.History && data.History.length > 0) {
