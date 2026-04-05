@@ -17,3 +17,4 @@ go build -ldflags="-s -w" -o dist\%APP_NAME%-linux-amd64 .
 
 echo Build complete. Output files:
 dir /b dist
+
