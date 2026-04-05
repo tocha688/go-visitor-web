@@ -24,18 +24,32 @@
         .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; }
         .badge.success { background: #e8f5e9; color: #4caf50; }
         .badge.warning { background: #fff3e0; color: #ff9800; }
-        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-left: 10px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .btn-primary { background: #667eea; color: white; }
         .btn-danger { background: #f44336; color: white; }
         .btn-secondary { background: #9e9e9e; color: white; }
         .actions { display: flex; gap: 10px; margin-top: 20px; }
         .loading { text-align: center; padding: 20px; color: #999; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal { background: white; margin: 50px auto; width: 500px; border-radius: 8px; }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { margin: 0; font-size: 16px; }
+        .modal-close { font-size: 24px; cursor: pointer; color: #999; }
+        .modal-close:hover { color: #333; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .form-group input:focus { outline: none; border-color: #667eea; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>访客系统</h1>
         <div>
-            <button onclick="loadData()" class="btn" style="background:#667eea;color:white;margin-right:10px">刷新</button>
+            <button onclick="openSettings()" class="btn btn-primary" style="margin-right:10px">设置</button>
+            <button onclick="loadData()" class="btn btn-primary" style="margin-right:10px">刷新</button>
             <form action="/adm/reset" method="post" onsubmit="return confirm('确定要重置所有数据吗？')" style="display:inline">
                 <button type="submit" class="btn btn-danger">重置数据</button>
             </form>
@@ -62,23 +76,6 @@
         </div>
 
         <div class="section">
-            <h3>跳转配置 <span id="targetUrl" style="font-size:12px;color:#999;font-weight:normal"></span></h3>
-            <form action="/adm/updateTarget" method="post" style="margin-top:15px;display:flex;gap:10px">
-                <input type="text" name="target_url" id="targetInput" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
-                <button type="submit" class="btn" style="background:#667eea;color:white">保存</button>
-            </form>
-        </div>
-
-        <div class="section">
-            <h3>修改密码</h3>
-            <form id="passwordForm" style="margin-top:15px;display:flex;gap:10px">
-                <input type="password" id="newPassword" placeholder="新密码" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
-                <button type="submit" class="btn" style="background:#667eea;color:white">修改</button>
-            </form>
-            <div id="passwordMsg" style="margin-top:10px;font-size:13px"></div>
-        </div>
-
-        <div class="section">
             <h3>历史统计 <span style="font-size:12px;color:#999;font-weight:normal">按日期统计</span></h3>
             <table>
                 <thead><tr><th>日期</th><th>访问量</th><th>独立IP</th><th>爬虫</th></tr></thead>
@@ -98,18 +95,85 @@
         </div>
     </div>
 
-    <div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000">
-        <div style="background:white;margin:50px auto;width:600px;max-height:80%;border-radius:8px;display:flex;flex-direction:column">
-            <div style="padding:15px 20px;border-bottom:1px solid #eee;flex-shrink:0">
-                <h3 style="margin:0;float:left">访问详情</h3>
-                <span onclick="closeModal()" style="cursor:pointer;font-size:24px;float:right">&times;</span>
-                <div style="clear:both"></div>
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>设置</h3>
+                <span class="modal-close" onclick="closeSettings()">&times;</span>
             </div>
-            <div id="modalContent" style="padding:20px;overflow-y:auto;flex:1;max-height:calc(80vh - 60px)"></div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>跳转链接</label>
+                    <input type="text" id="settingsTargetUrl" placeholder="https://example.com">
+                </div>
+                <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" id="settingsPassword" placeholder="留空则不修改">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSettings()">取消</button>
+                <button class="btn btn-primary" onclick="saveSettings()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal-overlay">
+        <div class="modal" style="width:600px">
+            <div class="modal-header">
+                <h3>访问详情</h3>
+                <span class="modal-close" onclick="closeDetailModal()">&times;</span>
+            </div>
+            <div id="modalContent" class="modal-body"></div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <script>
+        var currentTargetUrl = '';
+
+        function openSettings() {
+            document.getElementById('settingsTargetUrl').value = currentTargetUrl;
+            document.getElementById('settingsPassword').value = '';
+            document.getElementById('settingsModal').style.display = 'block';
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function saveSettings() {
+            var targetUrl = document.getElementById('settingsTargetUrl').value;
+            var password = document.getElementById('settingsPassword').value;
+            
+            if (targetUrl) {
+                fetch('/adm/updateTarget', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'target_url=' + encodeURIComponent(targetUrl)
+                });
+            }
+            
+            if (password) {
+                fetch('/adm/updatePassword', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'password=' + encodeURIComponent(password)
+                }).then(function(r){ return r.json(); }).then(function(d){
+                    if (d.status === 'ok') {
+                        alert('密码修改成功');
+                    }
+                });
+            }
+            
+            closeSettings();
+            loadData();
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
         async function loadData() {
             try {
                 const resp = await fetch('/api/stats');
@@ -119,8 +183,7 @@
                 document.getElementById('crawlers').textContent = data.Crawlers;
                 document.getElementById('logCount').textContent = data.Logs ? data.Logs.length : 0;
                 document.getElementById('uniqueIPs').textContent = data.UniqueIPs;
-                document.getElementById('targetUrl').textContent = '当前目标: ' + DOMPurify.sanitize(data.TargetURL);
-                document.getElementById('targetInput').value = DOMPurify.sanitize(data.TargetURL);
+                currentTargetUrl = data.TargetURL || '';
 
                 let historyHtml = '';
                 if (data.History && data.History.length > 0) {
@@ -196,32 +259,10 @@
                     });
                 });
             });
-            document.getElementById('modal').style.display = 'block';
+            document.getElementById('detailModal').style.display = 'block';
         }
 
-        function closeModal() { document.getElementById('modal').style.display = 'none'; }
-        document.getElementById('modal').onclick = function(e) { if (e.target === this) closeModal(); }
-        
-        document.getElementById('passwordForm').addEventListener('submit', function(e){
-            e.preventDefault();
-            var pwd = document.getElementById('newPassword').value;
-            if (!pwd) return;
-            fetch('/adm/updatePassword', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'password=' + encodeURIComponent(pwd)
-            }).then(function(r){ return r.json(); }).then(function(d){
-                var msg = document.getElementById('passwordMsg');
-                if (d.status === 'ok') {
-                    msg.style.color = '#4caf50';
-                    msg.textContent = '密码修改成功';
-                    document.getElementById('newPassword').value = '';
-                } else {
-                    msg.style.color = '#f44336';
-                    msg.textContent = '修改失败: ' + (d.error || '');
-                }
-            });
-        });
+        document.getElementById('detailModal').onclick = function(e) { if (e.target === this) closeDetailModal(); }
         
         loadData();
         setInterval(loadData, 5000);
