@@ -13,21 +13,21 @@ CLI_FILE="/usr/local/bin/$CLI_NAME"
 
 # Default values
 PORT="8080"
-MODE="local"
+MODE="web"
 REMOVE=false
 
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -w, --web      Install from GitHub (download latest release)"
+    echo "  -l, --local    Install from local files in current directory"
     echo "  -p, --port     Set port (default: 8080)"
     echo "  -r, --remove   Uninstall service and files"
     echo "  -h, --help     Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                      # Local install using files in current directory"
-    echo "  $0 -w                    # Download and install latest release from GitHub"
+    echo "  $0                      # Download and install latest release from GitHub"
+    echo "  $0 -l                    # Local install using files in current directory"
     echo "  $0 -p 9000              # Install with custom port"
     echo "  $0 -r                   # Uninstall"
     exit 1
@@ -36,8 +36,8 @@ usage() {
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -w|--web)
-            MODE="web"
+        -l|--local)
+            MODE="local"
             shift
             ;;
         -p|--port)
