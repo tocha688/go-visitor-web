@@ -71,14 +71,14 @@ jobs:
         if: steps.version.outputs.SKIP != 'true'
         run: |
           cp ../scripts/install.sh dist/
-          cp ../scripts/visitor dist/
-          chmod +x dist/install.sh dist/visitor
+          cp ../scripts/vtor dist/
+          chmod +x dist/install.sh dist/vtor
           cd dist
           zip visitor-windows-amd64.zip visitor-windows-amd64.exe config.yaml
           zip visitor-windows-386.zip visitor-windows-386.exe config.yaml
-          tar -czf visitor-linux-amd64.tar.gz visitor-linux-amd64 config.yaml install.sh visitor
-          tar -czf visitor-linux-386.tar.gz visitor-linux-386 config.yaml install.sh visitor
-          tar -czf visitor-linux-arm64.tar.gz visitor-linux-arm64 config.yaml install.sh visitor
+          tar -czf visitor-linux-amd64.tar.gz visitor-linux-amd64 config.yaml install.sh vtor
+          tar -czf visitor-linux-386.tar.gz visitor-linux-386 config.yaml install.sh vtor
+          tar -czf visitor-linux-arm64.tar.gz visitor-linux-arm64 config.yaml install.sh vtor
 
       - name: Create tag
         if: steps.version.outputs.SKIP != 'true'
