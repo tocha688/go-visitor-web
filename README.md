@@ -12,23 +12,39 @@
 - **管理后台**：查看统计数据和访问日志
 - **数据持久化**：JSON 文件存储
 
-## 快速开始
+## 安装
 
-### 下载发布版
+### 一键安装（推荐）
+
+```bash
+# 在线安装（下载最新版本）
+curl -sL https://raw.githubusercontent.com/tocha688/go-visitor-web/master/scripts/install.sh | sudo bash
+
+# 本地安装（使用当前目录的文件）
+chmod +x install.sh
+sudo ./install.sh
+
+# 指定端口安装
+sudo ./install.sh -p 9000
+```
+
+### 下载安装
 
 从 [Releases](https://github.com/tocha688/go-visitor-web/releases) 下载对应平台的压缩包，解压后运行：
 
 ```bash
 # Linux
-./visitor-linux-amd64
+tar -xzf visitor-linux-amd64.tar.gz
+sudo ./install.sh
 
 # Windows
+# 解压后双击运行或命令行启动
 visitor-windows-amd64.exe
 ```
 
-### 配置
+## 配置
 
-修改 `config.yaml`：
+修改 `/opt/visitor/config.yaml`：
 
 ```yaml
 app:
@@ -40,24 +56,52 @@ stats:
   visit_file: "data/visits.json" # 数据存储文件
 ```
 
-### 访问
+## 访问
 
 - 前台页面：`http://localhost:8080/任意路径`
 - 管理后台：`http://localhost:8080/adm`
+
+## CLI 管理命令
+
+安装后会提供 `vtor` 命令：
+
+```bash
+vtor start              # 启动服务
+vtor stop               # 停止服务
+vtor restart            # 重启服务
+vtor status             # 查看状态
+vtor port <端口>        # 修改端口
+vtor password <密码>     # 修改密码
+vtor log                # 查看日志
+vtor config             # 查看配置
+vtor upgrade            # 升级到最新版本
+vtor uninstall          # 卸载（需确认）
+```
+
+## 卸载
+
+```bash
+# 使用安装脚本卸载
+sudo ./install.sh -r
+
+# 或使用 vtor 命令卸载
+sudo vtor uninstall
+```
 
 ## 目录结构
 
 ```
 .
 ├── main.go              # 主程序
-├── config.yaml          # 配置文件
+├── config.yaml          # 配置文件（打包时生成）
 ├── templates/           # HTML 模板
 │   ├── index.html       # 入口页面
 │   ├── loading.html     # 加载页面（收集指纹）
 │   ├── dashboard.html   # 管理后台
 │   └── login.html       # 登录页面
-├── data/                # 数据目录（自动创建）
-│   └── visits.json      # 访问数据
+├── scripts/             # 脚本目录
+│   ├── install.sh       # 安装脚本
+│   └── vtor             # CLI 管理命令
 └── dist/                # 编译输出目录
 ```
 
@@ -79,18 +123,20 @@ chmod +x build.sh
 需要 Go 1.21+
 
 ```bash
-# 编译所有平台
+# Windows
 go build -ldflags="-s -w" -o visitor-windows-amd64.exe .
+
+# Linux
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o visitor-linux-amd64 .
 ```
 
 ## 发布
 
-推送 v 开头的标签自动发布：
+推送带版本号的 commit 自动编译发布：
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git commit --allow-empty -m "Release v0.1.0"
+git push origin master
 ```
 
 ## 工作原理
@@ -112,4 +158,3 @@ git push origin v0.1.0
 - 其他非法用途
 
 使用本工具产生的任何问题由使用者自行承担。
-
