@@ -6,7 +6,8 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
-        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header { background: white; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header-inner { max-width: 1400px; margin: 0 auto; padding: 0 20px; width: 100%; display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 20px; color: #333; }
         .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
         .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; }
@@ -46,16 +47,18 @@
 </head>
 <body>
     <div class="header">
-        <h1>访客系统</h1>
-        <div style="display:flex;gap:8px;align-items:center">
-            <button onclick="openSettings()" class="btn btn-secondary">设置</button>
-            <button onclick="loadData()" class="btn btn-secondary">刷新</button>
-            <form action="/adm/reset" method="post" onsubmit="return confirm('确定要重置所有数据吗？')" style="display:inline">
-                <button type="submit" class="btn btn-danger">重置</button>
-            </form>
-            <form action="/adm/logout" method="post">
-                <button type="submit" class="btn" style="background:#666;color:white">退出</button>
-            </form>
+        <div class="header-inner">
+            <h1>访客系统</h1>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button onclick="openSettings()" class="btn btn-secondary">设置</button>
+                <button onclick="loadData()" class="btn btn-secondary">刷新</button>
+                <form action="/adm/reset" method="post" onsubmit="return confirm('确定要重置所有数据吗？')" style="display:inline">
+                    <button type="submit" class="btn btn-danger">重置</button>
+                </form>
+                <form action="/adm/logout" method="post">
+                    <button type="submit" class="btn" style="background:#666;color:white">退出</button>
+                </form>
+            </div>
         </div>
     </div>
     <div class="container">
