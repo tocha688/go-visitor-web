@@ -24,12 +24,14 @@ usage() {
     echo "  password <pwd>     Change admin password"
     echo "  log                Show service logs (follow mode)"
     echo "  config             Show current config"
+    echo "  upgrade            Upgrade to latest version"
     echo "  uninstall          Uninstall service and files"
     echo ""
     echo "Examples:"
     echo "  vtor start"
     echo "  vtor port 9000"
     echo "  vtor password mysecret"
+    echo "  vtor upgrade"
     echo "  vtor uninstall"
     exit 1
 }
@@ -126,6 +128,76 @@ cmd_config() {
     cat "$CONFIG_FILE"
 }
 
+cmd_upgrade() {
+    check_root
+    
+    echo -e "${YELLOW}=== Upgrading Visitor Tracker ===${NC}"
+    echo ""
+    
+    REPO="tocha688/go-visitor-web"
+    
+    echo "Fetching latest version..."
+    LATEST_VERSION=$(curl -s https://api.github.com/repos/$REPO/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+' | sed 's/v//')
+    if [ -z "$LATEST_VERSION" ]; then
+        echo -e "${RED}Failed to fetch latest version${NC}"
+        exit 1
+    fi
+    echo "Latest version: v$LATEST_VERSION"
+    
+    ARCH=$(uname -m)
+    case $ARCH in
+        x86_64)
+            ARCH_NAME="amd64"
+            ;;
+        i386|i686)
+            ARCH_NAME="386"
+            ;;
+        aarch64|arm64)
+            ARCH_NAME="arm64"
+            ;;
+        *)
+            echo -e "${RED}Unsupported architecture: $ARCH${NC}"
+            exit 1
+            ;;
+    esac
+    echo "Architecture: $ARCH_NAME"
+    
+    FILENAME="visitor-linux-$ARCH_NAME.tar.gz"
+    DOWNLOAD_URL="https://github.com/$REPO/releases/download/v$LATEST_VERSION/$FILENAME"
+    
+    echo ""
+    echo "Downloading..."
+    cd /tmp
+    curl -# -L -o "$FILENAME" "$DOWNLOAD_URL"
+    
+    echo "Extracting..."
+    tar -xzf "$FILENAME"
+    
+    echo "Stopping service..."
+    systemctl stop "$SERVICE_NAME"
+    
+    echo "Upgrading binary..."
+    cp "$INSTALL_DIR/visitor" "$INSTALL_DIR/visitor.bak"
+    cp "visitor-linux-$ARCH_NAME" "$INSTALL_DIR/visitor"
+    chmod +x "$INSTALL_DIR/visitor"
+    rm -f "visitor-linux-$ARCH_NAME"
+    
+    echo "Starting service..."
+    systemctl start "$SERVICE_NAME"
+    
+    rm -f /tmp/$FILENAME
+    
+    echo ""
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+        echo -e "${GREEN}=== Upgrade Complete ===${NC}"
+    else
+        echo -e "${RED}Upgrade failed, restoring backup...${NC}"
+        cp "$INSTALL_DIR/visitor.bak" "$INSTALL_DIR/visitor"
+        systemctl start "$SERVICE_NAME"
+        exit 1
+    fi
+}
+
 cmd_uninstall() {
     check_root
     
@@ -206,6 +278,9 @@ case "$1" in
         ;;
     config)
         cmd_config
+        ;;
+    upgrade)
+        cmd_upgrade
         ;;
     uninstall)
         cmd_uninstall
