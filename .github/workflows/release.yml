@@ -10,8 +10,10 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  check-version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,18 +22,27 @@ jobs:
         id: version
         run: |
           VERSION=$(echo "${{ github.event.head_commit.message }}" | grep -oP 'v\d+\.\d+\.\d+' | head -1)
-          if [ -z "$VERSION" ]; then
-            VERSION="v0.0.1"
-          fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Creating release for $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "No valid version found in commit message, skipping release"
+            echo "SKIP=true" >> $GITHUB_OUTPUT
+          else
+            echo "Found version: $VERSION"
+            echo "SKIP=false" >> $GITHUB_OUTPUT
+          fi
 
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.SKIP != 'true'
+    runs-on: ubuntu-latest
+    steps:
       - name: Create tag
         run: |
+          VERSION="${{ needs.check-version.outputs.VERSION }}"
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git tag ${{ steps.version.outputs.VERSION }}
-          git push origin ${{ steps.version.outputs.VERSION }}
+          git tag "$VERSION"
+          git push origin "$VERSION"
 
       - name: Set up Go
         uses: actions/setup-go@v5
