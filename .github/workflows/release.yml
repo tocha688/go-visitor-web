@@ -87,9 +87,14 @@ jobs:
 
       - name: Create Release
         if: steps.version.outputs.SKIP != 'true'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/visitor-windows-amd64.zip dist/visitor-windows-386.zip dist/visitor-linux-amd64.tar.gz dist/visitor-linux-386.tar.gz dist/visitor-linux-arm64.tar.gz
-          generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd dist
+          gh release create "${{ steps.version.outputs.VERSION }}" \
+            visitor-windows-amd64.zip \
+            visitor-windows-386.zip \
+            visitor-linux-amd64.tar.gz \
+            visitor-linux-386.tar.gz \
+            visitor-linux-arm64.tar.gz \
+            --generate-notes
